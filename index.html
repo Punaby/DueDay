@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DueDay</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+  /* ── LIGHT THEME (DEFAULT) ── */
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --accent: #6366f1;
+    --accent-soft: #eef2ff;
+    
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --crimson: #ea580c;
+    --crimson-soft: #fff7ed;
+    --warning: #d97706;
+    --warning-soft: #fffbe3;
+    --future: #475569;
+    --future-soft: #f1f5f9;
+    --completed: #15803d;
+    --completed-soft: #dcfce7;
+    
+    --shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+  }
+
+  /* ── SPACE DARK THEME ── */
+  [data-theme="dark"] {
+    --p700: #1a0a40; --p600: #2d1070; --p500: #4a1fa8; --p400: #7c3aed; --p300: #a78bfa; --p200: #c4b5fd;
+    --black: #03020a; --surf: #0a0720; --surf2: #110e2e; --surf3: #191540;
+    --fg: #f0ebff; --fg2: #a89bc8; --fg3: #6b5f88;
+    --bdr: rgba(124,58,237,0.20); --bdr2: rgba(124,58,237,0.40);
+    
+    --star1: rgba(255,255,255,0.95); --star2: rgba(196,181,253,0.85);
+    --neb1: rgba(124, 24, 184, 0.45);   
+    --neb2: rgba(124, 24, 184, 0.55);   
+
+    --bg: var(--black);
+    --card: var(--surf);
+    --text: var(--fg);
+    --muted: var(--fg2);
+    --border: var(--bdr2);
+    --accent: var(--p400);
+    --accent-soft: var(--surf3);
+
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.15);
+    --crimson: #f97316;
+    --crimson-soft: rgba(249, 115, 22, 0.15);
+    --warning: #f59e0b;
+    --warning-soft: rgba(245, 158, 11, 0.15);
+    --future: #94a3b8;
+    --future-soft: rgba(148, 163, 184, 0.15);
+    --completed: #22c55e;
+    --completed-soft: rgba(34, 197, 94, 0.15);
+
+    --shadow: 0 4px 25px rgba(124,58,237,0.15);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Starfield & Nebula Background Effects (Active in Dark Mode) */
+  [data-theme="dark"] body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(2px 2px at 8% 18%,var(--star1),transparent),
+      radial-gradient(3.5px 3.5px at 81% 48%,var(--star2),transparent),
+      radial-gradient(2.5px 2.5px at 14% 69%,var(--star1),transparent),
+      radial-gradient(2px 2px at 47% 22%,var(--star2),transparent),
+      radial-gradient(3px 3px at 69% 88%,var(--star1),transparent),
+      radial-gradient(2px 2px at 92% 14%,var(--star2),transparent),
+      radial-gradient(3.5px 3.5px at 31% 74%,var(--star1),transparent),
+      radial-gradient(2px 2px at 58% 51%,var(--star2),transparent),
+      radial-gradient(2.5px 2.5px at 74% 33%,var(--star1),transparent),
+      radial-gradient(2px 2px at 3% 91%,var(--star2),transparent),
+      radial-gradient(3px 3px at 50% 95%,var(--star1),transparent),
+      radial-gradient(2.5px 2.5px at 96% 62%,var(--star2),transparent);
+  }
+
+  [data-theme="dark"] body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 50%, var(--neb1), transparent),
+      radial-gradient(ellipse 55% 55% at 50% 45%, var(--neb2), transparent),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(67, 12, 184, 0.35), transparent);
+  }
+
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+
+  .app { max-width: 1200px; margin: auto; padding: 24px 20px 50px; position: relative; z-index: 1; }
+  
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -0.8px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+  .subtitle { color: var(--muted); margin-top: 2px; font-size: 14px; }
+
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 700; font-size: 14px;
+    background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn.secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+  .btn.danger-btn { background: var(--danger); color: #fff; box-shadow: none; }
+
+  .sync-badge {
+    font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 5px; background: var(--border); color: var(--muted);
+  }
+  .sync-badge.synced { background: var(--completed-soft); color: var(--completed); }
+  .sync-badge.syncing { background: var(--warning-soft); color: var(--warning); }
+  .sync-badge.offline { background: var(--danger-soft); color: var(--danger); }
+
+  .toolbar {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 10px; display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; margin-bottom: 20px; box-shadow: var(--shadow);
+  }
+  .tabs { display: flex; gap: 4px; }
+  .tab { border: 0; background: transparent; color: var(--muted); padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 13px; }
+  .tab.active { background: var(--accent-soft); color: var(--accent); }
+
+  .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
+  select, .search {
+    border: 1px solid var(--border); background: var(--card); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 13px;
+  }
+  .search { min-width: 180px; }
+
+  .monthbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .monthbar h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .nav { display: flex; gap: 6px; align-items: center; }
+  .iconbtn {
+    width: 36px; height: 36px; border: 1px solid var(--border); background: var(--card); border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text);
+  }
+  .iconbtn:hover { background: var(--accent-soft); }
+
+  .calendar {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+  .weekday { padding: 10px; text-align: center; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; border-right: 1px solid var(--border); }
+  .weekday:last-child { border-right: 0; }
+  
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .day {
+    min-height: 110px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 6px; position: relative; background: var(--card); display: flex; flex-direction: column; gap: 4px;
+  }
+  .day:nth-child(7n) { border-right: 0; }
+  .day.other { opacity: 0.4; }
+  .day.today .daynum { background: var(--accent); color: #fff; }
+  .daynum {
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-size: 12px; font-weight: 800; margin-bottom: 2px;
+  }
+  .event {
+    width: 100%; border: 0; text-align: left; padding: 4px 6px; border-radius: 6px;
+    background: var(--accent-soft); color: var(--text); font-size: 11px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; gap: 4px; line-height: 1.2;
+    border-left: 3px solid var(--accent);
+  }
+  .event-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+  .event-time { font-size: 10px; opacity: 0.75; flex-shrink: 0; }
+  .event.done { opacity: .4; text-decoration: line-through; }
+
+  .list-container { display: flex; flex-direction: column; gap: 16px; }
+  .class-group { display: flex; flex-direction: column; gap: 8px; }
+  .class-header { 
+    font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); display: flex; align-items: center; gap: 8px; margin-top: 4px;
+  }
+  .class-header::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+  .item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px;
+    display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); width: 100%;
+    border-left: 4px solid var(--accent); flex-wrap: wrap;
+  }
+  .check { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .item-content { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  
+  .pill { 
+    padding: 4px 8px; border-radius: 6px; background: var(--accent-soft); 
+    font-weight: 700; font-size: 11px; color: var(--accent); flex-shrink: 0; text-transform: uppercase;
+  }
+  
+  .title-group { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .title { font-weight: 700; font-size: 14px; color: var(--text); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .milestones-summary { font-size: 11px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+
+  .due-badge {
+    padding: 5px 12px; border-radius: 8px; font-weight: 800; font-size: 12px;
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap;
+  }
+  .due-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .due-badge .due-time { font-weight: 600; opacity: 0.9; margin-left: 2px; border-left: 1px solid currentColor; padding-left: 6px; }
+
+  .due-badge.today { background: var(--danger-soft); color: var(--danger); }
+  .due-badge.today::before { background: var(--danger); }
+  .due-badge.tomorrow { background: var(--crimson-soft); color: var(--crimson); }
+  .due-badge.tomorrow::before { background: var(--crimson); }
+  .due-badge.overdue { background: var(--danger-soft); color: var(--danger); }
+  .due-badge.overdue::before { background: var(--danger); }
+  .due-badge.soon { background: var(--warning-soft); color: var(--warning); }
+  .due-badge.soon::before { background: var(--warning); }
+  .due-badge.future { background: var(--future-soft); color: var(--future); }
+  .due-badge.future::before { background: var(--future); }
+  
+  .due-badge.completed { background: var(--completed-soft); color: var(--completed); }
+  .due-badge.completed::before { background: var(--completed); }
+
+  .item.done { opacity: 0.65; }
+  .item.done .title { text-decoration: line-through; }
+
+  .item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .smallbtn { border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; }
+  .smallbtn:hover { background: var(--accent-soft); color: var(--text); }
+  
+  .item-notes-panel {
+    display: none; width: 100%; margin-top: 6px; padding: 10px 12px;
+    background: var(--accent-soft); border-radius: 8px; font-size: 12px;
+    color: var(--text); white-space: pre-wrap; word-break: break-word;
+  }
+  .item-notes-panel.show { display: block; }
+
+  .empty { background: var(--card); border: 1px dashed var(--border); border-radius: 12px; padding: 36px; text-align: center; color: var(--muted); }
+
+  .modalback { position: fixed; inset: 0; background: rgba(3, 2, 10, 0.7); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50; backdrop-filter: blur(4px); }
+  .modalback.show { display: flex; }
+  .modal { width: min(520px, 100%); background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); max-height: 90vh; overflow-y: auto; }
+  .modal h2 { margin: 0 0 16px; font-size: 18px; }
+  .formgrid { display: grid; gap: 12px; }
+  label { font-size: 12px; font-weight: 800; color: var(--muted); display: block; margin-bottom: 4px; }
+  input[type="text"], input[type="password"], input[type="time"], input[type="datetime-local"], textarea, .modal select {
+    width: 100%; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 9px 11px; outline: none; font-size: 13px;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { min-height: 60px; resize: vertical; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+  /* Dark mode: brighter, purple calendar / clock icons in date & time inputs */
+  [data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 1; cursor: pointer; width: 20px; height: 20px; padding: 2px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23b99cff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+    filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.7));
+  }
+  [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+    opacity: 1; cursor: pointer; width: 20px; height: 20px; padding: 2px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23b99cff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l4 2'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+    filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.7));
+  }
+
+  .milestone-input-row { display: flex; gap: 6px; margin-top: 6px; }
+  .milestone-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .milestone-item { display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; align-items: center; gap: 8px; background: var(--accent-soft); padding: 7px 10px; border-radius: 7px; font-size: 12px; }
+  .milestone-due { width: 150px !important; padding: 5px 7px !important; font-size: 11px !important; }
+  .milestone-due-wrap { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+
+  .auth-toggle { font-size: 12px; text-align: center; margin-top: 10px; color: var(--muted); }
+  .auth-toggle a { color: var(--accent); font-weight: 700; text-decoration: none; cursor: pointer; }
+
+  /* ── TO-DO TAB ── */
+  .todo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  .todo-panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 18px;
+  }
+  .todo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .todo-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
+  .todo-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .todo-summary { color: var(--muted); font-size: 12px; font-weight: 700; }
+  .progress { height: 8px; border-radius: 99px; background: var(--accent-soft); overflow: hidden; margin-top: 12px; }
+  .progress > span { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.25s; }
+  .progress.complete > span { background: var(--completed); }
+  .todo-add { display: flex; gap: 6px; margin: 14px 0; }
+  .todo-add input[type="text"] { flex: 1; min-width: 0; }
+  .todo-add .btn { box-shadow: none; padding: 9px 14px; }
+  .todo-list { display: flex; flex-direction: column; gap: 8px; }
+  .todo-item {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; background: var(--card);
+    border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px;
+  }
+  .todo-item.done { opacity: 0.65; }
+  .todo-item.done .todo-title { text-decoration: line-through; }
+  .todo-title { flex: 1 1 110px; min-width: 0; font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+  .todo-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .todo-days { font-size: 12px; font-weight: 800; color: var(--accent); }
+  .todo-stats .hot { color: var(--warning); font-weight: 800; }
+  .todo-divider { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 2px; font-size: 12px; font-weight: 800; color: var(--muted); }
+  .todo-empty { border: 1px dashed var(--border); border-radius: 10px; padding: 22px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 560px) {
+    .todo-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 750px) {
+    .app { padding: 14px 10px 30px; }
+    header { align-items: flex-start; flex-direction: column; }
+    .toolbar { align-items: stretch; flex-direction: column; }
+    .filters { width: 100%; justify-content: stretch; }
+    .filters > * { flex: 1; min-width: 0; }
+    .item { flex-wrap: wrap; }
+    .item-content { width: 100%; }
+    .due-badge { margin-left: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div>
+      <h1><span>DueDay</span></h1>
+      <div class="subtitle">A clean online homework tracker</div>
+    </div>
+    <div class="header-actions">
+      <span id="syncStatus" class="sync-badge">Offline Mode</span>
+      <button class="btn secondary" id="authBtn">Sign In</button>
+      <button class="btn secondary" id="settingsBtn" title="Settings">Settings</button>
+      <button class="btn" id="addBtn">＋ Add Homework</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button class="tab active" data-view="calendar">Calendar</button>
+      <button class="tab" data-view="list">List</button>
+      <button class="tab" data-view="todo">To-Do</button>
+    </div>
+    <div class="filters" id="filters">
+      <select id="subjectFilter"><option value="all">All subjects</option></select>
+      <select id="statusFilter">
+        <option value="active">Active</option>
+        <option value="all">All</option>
+        <option value="completed">Completed</option>
+      </select>
+      <input class="search" id="search" placeholder="Search homework…">
+    </div>
+  </div>
+
+  <main id="calendarView">
+    <div class="monthbar">
+      <h2 id="monthTitle"></h2>
+      <div class="nav">
+        <button class="iconbtn" id="prevMonth" aria-label="Previous month">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <button class="iconbtn" id="todayBtn" style="width: auto; padding: 0 12px; font-weight: 700; font-size: 12px;">Today</button>
+        <button class="iconbtn" id="nextMonth" aria-label="Next month">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </div>
+    <div class="calendar">
+      <div class="weekdays">
+        <div class="weekday">Sun</div><div class="weekday">Mon</div><div class="weekday">Tue</div>
+        <div class="weekday">Wed</div><div class="weekday">Thu</div><div class="weekday">Fri</div><div class="weekday">Sat</div>
+      </div>
+      <div class="days" id="days"></div>
+    </div>
+  </main>
+
+  <main id="listView" style="display:none">
+    <div id="list" class="list-container"></div>
+  </main>
+
+  <main id="todoView" style="display:none">
+    <div class="todo-grid">
+      <section class="todo-panel">
+        <div class="todo-head">
+          <h2>Daily</h2>
+          <span class="todo-summary" id="dailySummary"></span>
+        </div>
+        <div class="todo-sub">Checks reset every midnight. Your total days keep counting.</div>
+        <div id="dailyProgress"></div>
+        <form class="todo-add" id="dailyForm">
+          <input type="text" id="dailyInput" placeholder="e.g. Read for 20 minutes" maxlength="120" autocomplete="off" aria-label="New daily task">
+          <button class="btn" type="submit">Add</button>
+        </form>
+        <div class="todo-list" id="dailyList"></div>
+      </section>
+
+      <section class="todo-panel">
+        <div class="todo-head">
+          <h2>One-time</h2>
+          <span class="todo-summary" id="onceSummary"></span>
+        </div>
+        <div class="todo-sub">Check it off once and you're done.</div>
+        <form class="todo-add" id="onceForm">
+          <input type="text" id="onceInput" placeholder="e.g. Return library book" maxlength="120" autocomplete="off" aria-label="New one-time task">
+          <button class="btn" type="submit">Add</button>
+        </form>
+        <div class="todo-list" id="onceList"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modalback" id="modalBack">
+  <div class="modal">
+    <h2 id="modalTitle">Add Homework</h2>
+    <form id="homeworkForm">
+      <div class="formgrid">
+        <div>
+          <label for="title">Assignment Title</label>
+          <input id="title" type="text" placeholder="e.g. Read Chapter 4" required>
+        </div>
+        <div>
+          <label for="subject">Subject / Class</label>
+          <input id="subject" type="text" list="subjects" placeholder="e.g. Math" required>
+          <datalist id="subjects"></datalist>
+        </div>
+        <div>
+          <label for="periodPreset">Apply Class Period Preset Time</label>
+          <select id="periodPreset"><option value="">Select class period...</option></select>
+        </div>
+        <div class="date-picker-wrap">
+          <label for="dueDate">Due Date & Time</label>
+          <input id="dueDate" type="datetime-local" required>
+        </div>
+        <div>
+          <label>Long-Term Plan / Milestones (Optional)</label>
+          <div class="milestone-input-row">
+            <input id="newMilestone" type="text" placeholder="Add sub-task or checkpoint...">
+            <button type="button" class="btn secondary" id="addMilestoneBtn">Add</button>
+          </div>
+          <div class="milestone-list" id="milestonesList"></div>
+        </div>
+        <div>
+          <label for="notes">Notes / Links</label>
+          <textarea id="notes" placeholder="Instructions, links, notes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn" id="saveBtn">Save Homework</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modalback" id="authModalBack">
+  <div class="modal">
+    <h2 id="authModalTitle">Sign In</h2>
+    <form id="authForm">
+      <div class="formgrid">
+        <div>
+          <label for="authUsername">Username</label>
+          <input id="authUsername" type="text" placeholder="e.g. alex_student" required autocomplete="username">
+        </div>
+        <div>
+          <label for="authPassword">Password</label>
+          <input id="authPassword" type="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+      </div>
+      <div id="authError" style="color: var(--danger); font-size: 12px; margin-top: 8px; display: none;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" id="cancelAuthBtn">Cancel</button>
+        <button type="submit" class="btn" id="submitAuthBtn">Sign In</button>
+      </div>
+      <div class="auth-toggle">
+        <span id="authToggleText">Need an account?</span> <a id="authToggleLink">Sign Up</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modalback" id="settingsModalBack">
+  <div class="modal">
+    <h2>Settings & Appearance</h2>
+    <div class="formgrid">
+      <div>
+        <label for="setTheme">App Theme / Appearance</label>
+        <select id="setTheme">
+          <option value="light">Light Mode (Default)</option>
+          <option value="dark">Space Dark Mode</option>
+        </select>
+      </div>
+      <div>
+        <label for="setSortMode">List View Organization</label>
+        <select id="setSortMode">
+          <option value="time">Sort by Upcoming Date / Time</option>
+          <option value="class">Group by Class / Subject</option>
+        </select>
+      </div>
+      <div>
+        <label for="setDefaultStatus">Default Status Filter</label>
+        <select id="setDefaultStatus">
+          <option value="all">Show All Homework</option>
+          <option value="active">Show Active Only</option>
+        </select>
+      </div>
+      <div>
+        <label for="setDefaultTime">Default Assignment Due Time</label>
+        <input id="setDefaultTime" type="time" value="08:00">
+      </div>
+      <hr style="border: 0; border-top: 1px solid var(--border); margin: 6px 0;">
+      <div>
+        <label>Manage Your Classes & Subjects</label>
+        <div id="subjectsSettingList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input id="newSubjectInput" type="text" placeholder="Add custom subject (e.g. Science)" style="flex:1">
+          <button type="button" class="btn secondary" id="addSubjectBtn">Add Class</button>
+        </div>
+      </div>
+      <hr style="border: 0; border-top: 1px solid var(--border); margin: 6px 0;">
+      <div>
+        <label>Class Period Presets</label>
+        <div id="periodsList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+        <div style="display:flex; gap:6px;">
+          <input id="pName" type="text" placeholder="Period Name (e.g. Per 1 Math)" style="flex:2">
+          <input id="pTime" type="time" value="08:00" style="flex:1">
+          <button type="button" class="btn secondary" id="addPeriodBtn">Add</button>
+        </div>
+      </div>
+      <hr style="border: 0; border-top: 1px solid var(--border); margin: 6px 0;">
+      <div>
+        <label>Data Management & Backups</label>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn secondary" id="exportBtn" style="flex:1">Export JSON</button>
+          <button type="button" class="btn secondary" id="importBtn" style="flex:1">Import JSON</button>
+          <input type="file" id="importFile" accept=".json" style="display:none">
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn secondary" id="cancelSettingsBtn">Cancel</button>
+      <button type="button" class="btn" id="saveSettingsBtn">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Firebase Setup
+const firebaseConfig = {
+  apiKey: "AIzaSyBqXFWf2CXr_-F_jmSiXEBO4biAJT_ZCok",
+  authDomain: "pantherhw.firebaseapp.com",
+  projectId: "pantherhw",
+  storageBucket: "pantherhw.firebasestorage.app",
+  messagingSenderId: "509507586535",
+  appId: "1:509507586535:web:7710e7f0bee5d1bdde5542"
+};
+
+let db = null, auth = null, currentUser = null, isFirebaseConfigured = false;
+
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    isFirebaseConfigured = true;
+  } catch (err) { console.warn("Firebase init error:", err); }
+}
+
+const DB_KEY = "dueday-homework-v2";
+const SETTINGS_KEY = "dueday-settings-v1";
+const SCHEMA_VERSION_KEY = "dueday-schema-version";
+const TODO_KEY = "dueday-todos-v1";
+
+let settings = Object.assign({
+  theme: "light",
+  sortMode: "time",
+  defaultStatus: "all",
+  defaultTime: "08:00",
+  customSubjects: ["8th Grade Math", "Honors Geometry", "Algebra"],
+  periods: [
+    { name: "Period 1", time: "08:00" },
+    { name: "Period 2", time: "09:00" },
+    { name: "Period 3", time: "10:15" }
+  ]
+}, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
+
+let assignments = [];
+let todos = [];
+let tempMilestones = [];
+let tempSettings = null;
+let currentDate = new Date();
+let view = "calendar";
+let editingId = null;
+let authIsSignUp = false;
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+function applyTheme(themeName) {
+  if (themeName === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+function normalizeAssignment(a) {
+  let dueStr = a.due || dateKey(new Date());
+  if (!dueStr.includes("T")) dueStr = `${dueStr}T${settings.defaultTime}`;
+  return {
+    id: a.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()),
+    title: a.title || "Untitled Assignment",
+    subject: a.subject || "General",
+    due: dueStr,
+    notes: a.notes || "",
+    done: !!a.done,
+    milestones: (a.milestones || []).map(m => typeof m === "string"
+      ? { title: m, due: "", done: false }
+      : { title: m.title || "", due: m.due || "", done: !!m.done })
+  };
+}
+
+function migrateData() {
+  // Load saved to-dos first: saveLocal() below writes them back, so they must be in memory already
+  loadTodos();
+
+  let rawData = localStorage.getItem(DB_KEY) || "[]";
+  let parsed = [];
+  try { parsed = JSON.parse(rawData); } catch(e) { parsed = []; }
+  if (!Array.isArray(parsed)) parsed = [];
+
+  assignments = parsed.map(normalizeAssignment);
+
+  localStorage.setItem(SCHEMA_VERSION_KEY, "2");
+  saveLocal();
+}
+
+function saveLocal() {
+  localStorage.setItem(DB_KEY, JSON.stringify(assignments));
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  localStorage.setItem(TODO_KEY, JSON.stringify(todos));
+}
+
+async function syncLocalToFirebase(user) {
+  if (!db || !user) return;
+  updateSyncBadge("syncing", "Syncing...");
+
+  try {
+    const userDocRef = db.collection("users").doc(user.uid);
+    const settingsDoc = await userDocRef.collection("settings").doc("config").get();
+    
+    if (settingsDoc.exists) {
+      settings = settingsDoc.data();
+      applyTheme(settings.theme || "light");
+      saveLocal();
+    } else {
+      await userDocRef.collection("settings").doc("config").set(settings);
+    }
+
+    const snapshot = await userDocRef.collection("assignments").get();
+    if (snapshot.empty && assignments.length > 0) {
+      const batch = db.batch();
+      assignments.forEach(item => {
+        batch.set(userDocRef.collection("assignments").doc(item.id), item);
+      });
+      await batch.commit();
+    } else {
+      const cloudData = [];
+      snapshot.forEach(doc => cloudData.push(doc.data()));
+      if (cloudData.length > 0) {
+        assignments = cloudData;
+        saveLocal();
+      }
+    }
+
+    // To-do items sync separately so a problem here never blocks homework sync
+    try {
+      const todoSnap = await userDocRef.collection("todos").get();
+      if (todoSnap.empty && todos.length > 0) {
+        const todoBatch = db.batch();
+        todos.forEach(item => {
+          todoBatch.set(userDocRef.collection("todos").doc(item.id), item);
+        });
+        await todoBatch.commit();
+      } else if (!todoSnap.empty) {
+        todos = todoSnap.docs.map(doc => normalizeTodo(doc.data()));
+        saveLocal();
+      }
+    } catch (todoErr) {
+      console.warn("To-do sync error:", todoErr);
+    }
+
+    render();
+    updateSyncBadge("synced", "Synced");
+  } catch (err) {
+    updateSyncBadge("offline", "Sync Error");
+  }
+}
+
+async function cloudSyncPush(assignment) {
+  saveLocal();
+  if (!db || !currentUser) return;
+  try {
+    updateSyncBadge("syncing", "Saving...");
+    await db.collection("users").doc(currentUser.uid).collection("assignments").doc(assignment.id).set(assignment, { merge: true });
+    updateSyncBadge("synced", "Synced");
+  } catch (err) { updateSyncBadge("offline", "Saved Locally"); }
+}
+
+async function cloudSyncSettings() {
+  saveLocal();
+  if (!db || !currentUser) return;
+  try {
+    updateSyncBadge("syncing", "Saving Settings...");
+    await db.collection("users").doc(currentUser.uid).collection("settings").doc("config").set(settings);
+    updateSyncBadge("synced", "Synced");
+  } catch (err) {}
+}
+
+async function cloudSyncDelete(id) {
+  saveLocal();
+  if (!db || !currentUser) return;
+  try {
+    updateSyncBadge("syncing", "Deleting...");
+    await db.collection("users").doc(currentUser.uid).collection("assignments").doc(id).delete();
+    updateSyncBadge("synced", "Synced");
+  } catch (err) {}
+}
+
+async function cloudSyncTodoPush(todo) {
+  saveLocal();
+  if (!db || !currentUser) return;
+  try {
+    updateSyncBadge("syncing", "Saving...");
+    await db.collection("users").doc(currentUser.uid).collection("todos").doc(todo.id).set(todo);
+    updateSyncBadge("synced", "Synced");
+  } catch (err) { updateSyncBadge("offline", "Saved Locally"); }
+}
+
+async function cloudSyncTodoDelete(id) {
+  saveLocal();
+  if (!db || !currentUser) return;
+  try {
+    updateSyncBadge("syncing", "Deleting...");
+    await db.collection("users").doc(currentUser.uid).collection("todos").doc(id).delete();
+    updateSyncBadge("synced", "Synced");
+  } catch (err) {}
+}
+
+function updateSyncBadge(state, text) {
+  const badge = $("syncStatus");
+  badge.className = `sync-badge ${state}`;
+  badge.textContent = text;
+}
+
+if (isFirebaseConfigured && auth) {
+  auth.onAuthStateChanged(async user => {
+    currentUser = user;
+    if (user) {
+      $("authBtn").textContent = "Sign Out";
+      await syncLocalToFirebase(user);
+    } else {
+      $("authBtn").textContent = "Sign In";
+      updateSyncBadge("offline", "Offline Mode");
+    }
+  });
+} else {
+  updateSyncBadge("offline", "Local Mode");
+}
+
+function parseDateTime(s) { return new Date(s); }
+
+function getRawRelativeDate(s) {
+  const d = parseDateTime(s);
+  const now = new Date();
+  if (d < now) return "Overdue";
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((dueDayStart - todayStart) / 86400000);
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays < 7) return `In ${diffDays} days`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function relativeDate(s, isDone = false) {
+  const baseDate = getRawRelativeDate(s);
+  return isDone ? `Completed (${baseDate})` : baseDate;
+}
+
+function dueClass(s, isDone = false) {
+  if (isDone) return "completed";
+  const d = parseDateTime(s);
+  const now = new Date();
+  if (d < now) return "overdue";
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((dueDayStart - todayStart) / 86400000);
+
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "tomorrow";
+  if (diffDays <= 7) return "soon";
+  return "future";
+}
+
+function formatTime(s) {
+  return parseDateTime(s).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c]));
+}
+
+function filtered() {
+  const subject = $("subjectFilter").value;
+  const status = $("statusFilter").value;
+  const q = $("search").value.trim().toLowerCase();
+
+  return assignments.filter(a => {
+    if (subject !== "all" && a.subject !== subject) return false;
+    if (status === "active" && a.done) return false;
+    if (status === "completed" && !a.done) return false;
+    if (q && !(a.title + " " + a.subject + " " + (a.notes || "")).toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => new Date(a.due) - new Date(b.due));
+}
+
+function renderCalendar() {
+  const y = currentDate.getFullYear(), m = currentDate.getMonth();
+  $("monthTitle").textContent = currentDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const first = new Date(y, m, 1), start = new Date(y, m, 1 - first.getDay());
+  const items = filtered();
+
+  $("days").innerHTML = Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const key = dateKey(d);
+    const dayItems = items.filter(a => dateKey(parseDateTime(a.due)) === key);
+    const classes = ["day"];
+    if (d.getMonth() !== m) classes.push("other");
+    if (key === dateKey(new Date())) classes.push("today");
+
+    return `<div class="${classes.join(" ")}" data-date="${key}">
+      <div class="daynum">${d.getDate()}</div>
+      ${dayItems.map(a => `
+        <button class="event ${a.done ? 'done' : ''}" data-id="${a.id}" title="${escapeHtml(a.title)}">
+          <span class="event-title">${escapeHtml(a.title)}</span>
+          <span class="event-time">${formatTime(a.due)}</span>
+        </button>
+      `).join("")}
+    </div>`;
+  }).join("");
+
+  document.querySelectorAll(".event").forEach(b =>
+    b.addEventListener("click", e => { e.stopPropagation(); editAssignment(b.dataset.id); })
+  );
+  document.querySelectorAll(".day").forEach(cell =>
+    cell.addEventListener("dblclick", () => openModal(null, `${cell.dataset.date}T${settings.defaultTime}`))
+  );
+}
+
+function renderItemHTML(a) {
+  const mDone = a.milestones ? a.milestones.filter(m => m.done).length : 0;
+  const mTotal = a.milestones ? a.milestones.length : 0;
+  const hasNotes = a.notes && a.notes.trim().length > 0;
+
+  return `
+    <div class="item ${a.done ? 'done' : ''}">
+      <input class="check" type="checkbox" ${a.done ? 'checked' : ''} data-check="${a.id}">
+      <div class="item-content">
+        <span class="pill">${escapeHtml(a.subject)}</span>
+        <div class="title-group">
+          <span class="title">${escapeHtml(a.title)}</span>
+          ${mTotal > 0 ? `<span class="milestones-summary">📋 Plan: ${mDone}/${mTotal} tasks completed</span>` : ""}
+        </div>
+      </div>
+      <div class="due-badge ${dueClass(a.due, a.done)}">
+        <span>${relativeDate(a.due, a.done)}</span>
+        <span class="due-time">${formatTime(a.due)}</span>
+      </div>
+      <div class="item-actions">
+        ${hasNotes ? `<button class="smallbtn" data-toggle-notes="${a.id}">Notes</button>` : ''}
+        <button class="smallbtn" data-edit="${a.id}">Edit</button>
+        <button class="smallbtn" data-delete="${a.id}">Delete</button>
+      </div>
+      ${hasNotes ? `<div class="item-notes-panel" id="notes-${a.id}"><strong>Notes:</strong><br>${escapeHtml(a.notes)}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderList() {
+  const items = filtered();
+  if (!items.length) {
+    $("list").innerHTML = `<div class="empty">No homework matches your filters.<br><br><button class="btn" onclick="openModal()">Add Homework</button></div>`;
+    return;
+  }
+
+  if (settings.sortMode === "class") {
+    const grouped = {};
+    items.forEach(a => {
+      if (!grouped[a.subject]) grouped[a.subject] = [];
+      grouped[a.subject].push(a);
+    });
+
+    $("list").innerHTML = Object.keys(grouped).sort().map(subj => `
+      <div class="class-group">
+        <div class="class-header">${escapeHtml(subj)}</div>
+        ${grouped[subj].map(renderItemHTML).join("")}
+      </div>
+    `).join("");
+  } else {
+    $("list").innerHTML = items.map(renderItemHTML).join("");
+  }
+
+  document.querySelectorAll("[data-check]").forEach(x => x.addEventListener("change", () => toggleDone(x.dataset.check)));
+  document.querySelectorAll("[data-edit]").forEach(x => x.addEventListener("click", () => editAssignment(x.dataset.edit)));
+  document.querySelectorAll("[data-delete]").forEach(x => x.addEventListener("click", () => deleteAssignment(x.dataset.delete)));
+  document.querySelectorAll("[data-toggle-notes]").forEach(x => x.addEventListener("click", () => {
+    const panel = $(`notes-${x.dataset.toggleNotes}`);
+    if (panel) panel.classList.toggle("show");
+  }));
+}
+
+function refreshSubjects() {
+  const mergedSubjects = [...new Set([...(settings.customSubjects || []), ...assignments.map(a => a.subject).filter(Boolean)])].sort();
+  const old = $("subjectFilter").value;
+  
+  $("subjectFilter").innerHTML = '<option value="all">All subjects</option>' +
+    mergedSubjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  if (mergedSubjects.includes(old)) $("subjectFilter").value = old;
+  
+  $("subjects").innerHTML = mergedSubjects.map(s => `<option value="${escapeHtml(s)}">`).join("");
+}
+
+function render() {
+  refreshSubjects();
+  if (view === "calendar") renderCalendar();
+  else if (view === "list") renderList();
+  else renderTodos();
+}
+
+/* ── TO-DO LIST ── */
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(36).slice(2));
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function normalizeTodo(t) {
+  return {
+    id: t.id || newId(),
+    type: t.type === "daily" ? "daily" : "once",
+    title: t.title || "Untitled task",
+    createdAt: t.createdAt || new Date().toISOString(),
+    done: !!t.done,
+    doneAt: t.doneAt || null,
+    completedDates: Array.isArray(t.completedDates) ? t.completedDates : []
+  };
+}
+
+function loadTodos() {
+  let parsed = [];
+  try { parsed = JSON.parse(localStorage.getItem(TODO_KEY) || "[]"); } catch (e) { parsed = []; }
+  todos = (Array.isArray(parsed) ? parsed : []).map(normalizeTodo);
+}
+
+// Consecutive days completed, ending today (or yesterday if today isn't done yet)
+function calcStreak(dates) {
+  const set = new Set(dates);
+  const d = new Date();
+  if (!set.has(dateKey(d))) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (set.has(dateKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+function renderTodos() {
+  const today = dateKey(new Date());
+  const daily = todos.filter(t => t.type === "daily").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const once = todos.filter(t => t.type === "once");
+
+  // Daily
+  const doneToday = daily.filter(t => t.completedDates.includes(today)).length;
+  const pct = daily.length ? Math.round((doneToday / daily.length) * 100) : 0;
+  $("dailySummary").textContent = daily.length
+    ? (doneToday === daily.length ? "All done for today" : `${doneToday} of ${daily.length} done today`)
+    : "";
+  $("dailyProgress").innerHTML = daily.length
+    ? `<div class="progress ${doneToday === daily.length ? "complete" : ""}"><span style="width:${pct}%"></span></div>`
+    : "";
+
+  $("dailyList").innerHTML = daily.length ? daily.map(t => {
+    const done = t.completedDates.includes(today);
+    const total = t.completedDates.length;
+    const streak = calcStreak(t.completedDates);
+    return `
+      <div class="todo-item ${done ? "done" : ""}">
+        <input class="check" type="checkbox" ${done ? "checked" : ""} data-todo-toggle="${t.id}" aria-label="Mark ${escapeHtml(t.title)} done today">
+        <span class="todo-title">${escapeHtml(t.title)}</span>
+        <div class="todo-stats">
+          <span class="todo-days">${total === 0 ? "No days yet" : plural(total, "day") + " done"}</span>
+          ${streak >= 2 ? `<span class="${streak >= 7 ? "hot" : ""}">${streak}-day streak</span>` : ""}
+        </div>
+        <button class="smallbtn" data-todo-delete="${t.id}">Delete</button>
+      </div>`;
+  }).join("") : `<div class="todo-empty">No daily tasks yet. Add something you want to do every day.</div>`;
+
+  // One-time
+  const open = once.filter(t => !t.done).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const finished = once.filter(t => t.done).sort((a, b) => (b.doneAt || "").localeCompare(a.doneAt || ""));
+  $("onceSummary").textContent = once.length ? `${open.length} left` : "";
+
+  const onceRow = t => `
+    <div class="todo-item ${t.done ? "done" : ""}">
+      <input class="check" type="checkbox" ${t.done ? "checked" : ""} data-todo-toggle="${t.id}" aria-label="Mark ${escapeHtml(t.title)} done">
+      <span class="todo-title">${escapeHtml(t.title)}</span>
+      <button class="smallbtn" data-todo-delete="${t.id}">Delete</button>
+    </div>`;
+
+  let html = open.length
+    ? open.map(onceRow).join("")
+    : `<div class="todo-empty">${finished.length ? "Everything is done." : "Nothing on your list. Add a task above."}</div>`;
+  if (finished.length) {
+    html += `<div class="todo-divider"><span>Completed (${finished.length})</span><button class="smallbtn" data-todo-clear="1">Clear completed</button></div>`;
+    html += finished.map(onceRow).join("");
+  }
+  $("onceList").innerHTML = html;
+}
+
+function addTodo(type, title) {
+  title = title.trim();
+  if (!title) return;
+  const t = normalizeTodo({ id: newId(), type, title, createdAt: new Date().toISOString() });
+  todos.push(t);
+  cloudSyncTodoPush(t);
+  renderTodos();
+}
+
+function toggleTodo(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t) return;
+  if (t.type === "daily") {
+    const key = dateKey(new Date());
+    const set = new Set(t.completedDates);
+    if (set.has(key)) set.delete(key); else set.add(key);
+    t.completedDates = [...set].sort();
+  } else {
+    t.done = !t.done;
+    t.doneAt = t.done ? new Date().toISOString() : null;
+  }
+  cloudSyncTodoPush(t);
+  renderTodos();
+}
+
+function deleteTodo(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t) return;
+  if (t.type === "daily" && t.completedDates.length > 0 &&
+      !confirm(`Delete "${t.title}"? This also erases its ${plural(t.completedDates.length, "completed day")}.`)) return;
+  todos = todos.filter(x => x.id !== id);
+  cloudSyncTodoDelete(id);
+  renderTodos();
+}
+
+function clearCompletedTodos() {
+  const gone = todos.filter(t => t.type === "once" && t.done);
+  if (!gone.length) return;
+  todos = todos.filter(t => !(t.type === "once" && t.done));
+  gone.forEach(t => cloudSyncTodoDelete(t.id));
+  renderTodos();
+}
+
+$("dailyForm").addEventListener("submit", e => {
+  e.preventDefault();
+  addTodo("daily", $("dailyInput").value);
+  $("dailyInput").value = "";
+});
+$("onceForm").addEventListener("submit", e => {
+  e.preventDefault();
+  addTodo("once", $("onceInput").value);
+  $("onceInput").value = "";
+});
+$("todoView").addEventListener("change", e => {
+  const id = e.target.dataset && e.target.dataset.todoToggle;
+  if (id) toggleTodo(id);
+});
+$("todoView").addEventListener("click", e => {
+  const del = e.target.closest("[data-todo-delete]");
+  if (del) { deleteTodo(del.dataset.todoDelete); return; }
+  if (e.target.closest("[data-todo-clear]")) clearCompletedTodos();
+});
+
+// Daily checks reset automatically: "done today" is just "today's date is in completedDates".
+// This re-renders when midnight passes (or when the tab wakes up) so the list visibly resets.
+let lastDayKey = dateKey(new Date());
+function checkDayRollover() {
+  const k = dateKey(new Date());
+  if (k !== lastDayKey) { lastDayKey = k; render(); }
+}
+setInterval(checkDayRollover, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkDayRollover(); });
+
+function renderMilestonesInput() {
+  $("milestonesList").innerHTML = tempMilestones.map((m, idx) => `
+    <div class="milestone-item">
+      <input type="checkbox" ${m.done ? 'checked' : ''} onchange="tempMilestones[${idx}].done=!tempMilestones[${idx}].done; renderMilestonesInput();">
+      <span style="min-width:0; ${m.done ? 'text-decoration:line-through' : ''}">${escapeHtml(m.title)}</span>
+      <div class="milestone-due-wrap">
+        <span>Due</span>
+        <input class="milestone-due" type="date" value="${escapeHtml(m.due || '')}" onchange="tempMilestones[${idx}].due=this.value">
+      </div>
+      <button type="button" class="smallbtn" onclick="tempMilestones.splice(${idx},1); renderMilestonesInput();">✕</button>
+    </div>
+  `).join("");
+}
+
+function openModal(id = null, presetDateTime = null) {
+  editingId = id;
+  const a = id ? assignments.find(x => x.id === id) : null;
+  $("modalTitle").textContent = a ? "Edit Homework" : "Add Homework";
+  $("title").value = a?.title || "";
+  $("subject").value = a?.subject || "";
+  $("dueDate").value = a?.due || presetDateTime || `${dateKey(new Date())}T${settings.defaultTime}`;
+  $("notes").value = a?.notes || "";
+  
+  tempMilestones = a?.milestones
+    ? a.milestones.map(m => typeof m === "string" ? { title: m, due: "", done: false } : { title: m.title || "", due: m.due || "", done: !!m.done })
+    : [];
+  renderMilestonesInput();
+
+  $("periodPreset").innerHTML = '<option value="">Select class period...</option>' +
+    settings.periods.map(p => `<option value="${p.time}">${escapeHtml(p.name)} (${p.time})</option>`).join("");
+
+  $("modalBack").classList.add("show");
+  setTimeout(() => $("title").focus(), 50);
+}
+
+function closeModal() { $("modalBack").classList.remove("show"); editingId = null; }
+function editAssignment(id) { openModal(id); }
+
+function toggleDone(id) {
+  const a = assignments.find(x => x.id === id);
+  if (a) {
+    a.done = !a.done;
+    cloudSyncPush(a);
+    render();
+  }
+}
+
+function deleteAssignment(id) {
+  const a = assignments.find(x => x.id === id);
+  if (a && confirm(`Delete "${a.title}"?`)) {
+    assignments = assignments.filter(x => x.id !== id);
+    cloudSyncDelete(id);
+    render();
+  }
+}
+
+function openAuthModal() {
+  if (currentUser) { auth.signOut(); return; }
+  $("authError").style.display = "none";
+  $("authModalBack").classList.add("show");
+}
+
+function closeAuthModal() { $("authModalBack").classList.remove("show"); }
+
+$("authToggleLink").onclick = () => {
+  authIsSignUp = !authIsSignUp;
+  $("authModalTitle").textContent = authIsSignUp ? "Create Account" : "Sign In";
+  $("submitAuthBtn").textContent = authIsSignUp ? "Sign Up" : "Sign In";
+  $("authToggleText").textContent = authIsSignUp ? "Already have an account?" : "Need an account?";
+  $("authToggleLink").textContent = authIsSignUp ? "Sign In" : "Sign Up";
+};
+
+$("authForm").onsubmit = async e => {
+  e.preventDefault();
+  const rawUsername = $("authUsername").value.trim().toLowerCase().replace(/\s+/g, '');
+  const password = $("authPassword").value;
+  const errDiv = $("authError");
+  errDiv.style.display = "none";
+
+  if (!rawUsername) return;
+  const internalEmail = `${rawUsername}@dueday.app`;
+
+  try {
+    if (authIsSignUp) {
+      await auth.createUserWithEmailAndPassword(internalEmail, password);
+    } else {
+      await auth.signInWithEmailAndPassword(internalEmail, password);
+    }
+    closeAuthModal();
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.style.display = "block";
+  }
+};
+
+function openSettings() {
+  tempSettings = JSON.parse(JSON.stringify(settings));
+  if (!tempSettings.customSubjects) tempSettings.customSubjects = ["8th Grade Math", "Honors Geometry", "Algebra"];
+  if (!tempSettings.theme) tempSettings.theme = "light";
+
+  $("setTheme").value = tempSettings.theme;
+  $("setSortMode").value = tempSettings.sortMode;
+  $("setDefaultStatus").value = tempSettings.defaultStatus;
+  $("setDefaultTime").value = tempSettings.defaultTime;
+  
+  renderSubjectsSettingList();
+  renderPeriodsSettingList();
+  $("settingsModalBack").classList.add("show");
+}
+
+function renderSubjectsSettingList() {
+  $("subjectsSettingList").innerHTML = tempSettings.customSubjects.map((s, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--accent-soft); padding:6px 10px; border-radius:6px; font-size:12px;">
+      <span><strong>Class ${idx + 1}:</strong> ${escapeHtml(s)}</span>
+      <button type="button" class="smallbtn" onclick="tempSettings.customSubjects.splice(${idx},1); renderSubjectsSettingList();">Remove</button>
+    </div>
+  `).join("");
+}
+
+function renderPeriodsSettingList() {
+  $("periodsList").innerHTML = tempSettings.periods.map((p, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--accent-soft); padding:6px 10px; border-radius:6px; font-size:12px;">
+      <span><strong>${escapeHtml(p.name)}</strong> @ ${p.time}</span>
+      <button type="button" class="smallbtn" onclick="tempSettings.periods.splice(${idx},1); renderPeriodsSettingList();">Remove</button>
+    </div>
+  `).join("");
+}
+
+$("addBtn").onclick = () => openModal();
+$("cancelBtn").onclick = closeModal;
+$("authBtn").onclick = openAuthModal;
+$("cancelAuthBtn").onclick = closeAuthModal;
+$("settingsBtn").onclick = openSettings;
+
+$("addSubjectBtn").onclick = () => {
+  const name = $("newSubjectInput").value.trim();
+  if (name) {
+    if (!tempSettings.customSubjects) tempSettings.customSubjects = [];
+    tempSettings.customSubjects.push(name);
+    $("newSubjectInput").value = "";
+    renderSubjectsSettingList();
+  }
+};
+
+$("saveSettingsBtn").onclick = () => {
+  tempSettings.theme = $("setTheme").value;
+  tempSettings.sortMode = $("setSortMode").value;
+  tempSettings.defaultStatus = $("setDefaultStatus").value;
+  tempSettings.defaultTime = $("setDefaultTime").value;
+  
+  settings = tempSettings;
+  applyTheme(settings.theme);
+  cloudSyncSettings();
+  
+  $("settingsModalBack").classList.remove("show");
+  $("statusFilter").value = settings.defaultStatus;
+  render();
+};
+
+$("cancelSettingsBtn").onclick = () => {
+  tempSettings = null;
+  $("settingsModalBack").classList.remove("show");
+};
+
+$("periodPreset").addEventListener("change", e => {
+  if (!e.target.value) return;
+  const curr = $("dueDate").value.split("T")[0] || dateKey(new Date());
+  $("dueDate").value = `${curr}T${e.target.value}`;
+});
+
+$("addMilestoneBtn").onclick = () => {
+  const val = $("newMilestone").value.trim();
+  if (val) {
+    tempMilestones.push({ title: val, due: "", done: false });
+    $("newMilestone").value = "";
+    renderMilestonesInput();
+  }
+};
+
+$("addPeriodBtn").onclick = () => {
+  const name = $("pName").value.trim();
+  const time = $("pTime").value;
+  if (name && time) {
+    tempSettings.periods.push({ name, time });
+    $("pName").value = "";
+    renderPeriodsSettingList();
+  }
+};
+
+$("homeworkForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const data = {
+    title: $("title").value.trim(),
+    subject: $("subject").value.trim(),
+    due: $("dueDate").value,
+    notes: $("notes").value.trim(),
+    milestones: tempMilestones
+  };
+
+  if (editingId) {
+    const a = assignments.find(x => x.id === editingId);
+    Object.assign(a, data);
+    cloudSyncPush(a);
+  } else {
+    const newA = { id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), ...data, done: false };
+    assignments.push(newA);
+    cloudSyncPush(newA);
+  }
+
+  closeModal(); render();
+});
+
+$("exportBtn").onclick = () => {
+  const backup = { app: "dueday", version: 3, exportedAt: new Date().toISOString(), assignments, todos };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `dueday-backup-${dateKey(new Date())}.json`;
+  a.click();
+};
+
+// Merge by id: imported items are added or updated, nothing already saved gets deleted
+function mergeById(existing, incoming, combine) {
+  const map = new Map(existing.map(x => [x.id, x]));
+  incoming.forEach(x => {
+    const prev = map.get(x.id);
+    map.set(x.id, prev && combine ? combine(prev, x) : x);
+  });
+  return [...map.values()];
+}
+
+async function pushAllToCloud() {
+  if (!db || !currentUser) return;
+  try {
+    updateSyncBadge("syncing", "Saving...");
+    const ref = db.collection("users").doc(currentUser.uid);
+    const ops = [
+      ...assignments.map(a => [ref.collection("assignments").doc(a.id), a]),
+      ...todos.map(t => [ref.collection("todos").doc(t.id), t])
+    ];
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = db.batch();
+      ops.slice(i, i + 400).forEach(([r, d]) => batch.set(r, d));
+      await batch.commit();
+    }
+    updateSyncBadge("synced", "Synced");
+  } catch (err) { updateSyncBadge("offline", "Saved Locally"); }
+}
+
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      let hw, td = [];
+      if (Array.isArray(data)) {                       // old backup: homework only
+        hw = data;
+      } else if (data && Array.isArray(data.assignments)) { // new backup: homework + to-dos
+        hw = data.assignments;
+        if (Array.isArray(data.todos)) td = data.todos;
+      } else {
+        throw new Error("Unrecognized backup format");
+      }
+
+      const hwIn = hw.map(normalizeAssignment);
+      const tdIn = td.map(normalizeTodo);
+      assignments = mergeById(assignments, hwIn);
+      todos = mergeById(todos, tdIn, (prev, inc) => ({
+        ...inc,
+        completedDates: [...new Set([...(prev.completedDates || []), ...(inc.completedDates || [])])].sort()
+      }));
+
+      saveLocal(); render(); pushAllToCloud();
+      alert(`Backup imported: ${hwIn.length} homework item(s)` + (tdIn.length ? ` and ${tdIn.length} to-do(s).` : "."));
+    } catch(err) { alert("Invalid backup file."); }
+    $("importFile").value = "";
+  };
+  reader.readAsText(file);
+};
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  view = t.dataset.view;
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
+  $("calendarView").style.display = view === "calendar" ? "block" : "none";
+  $("listView").style.display = view === "list" ? "block" : "none";
+  $("todoView").style.display = view === "todo" ? "block" : "none";
+  // Homework filters don't apply to the to-do tab
+  $("filters").style.display = view === "todo" ? "none" : "";
+  render();
+});
+
+["subjectFilter", "statusFilter", "search"].forEach(id => $(id).addEventListener("input", render));
+$("prevMonth").onclick = () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); };
+$("nextMonth").onclick = () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); };
+$("todayBtn").onclick = () => { currentDate = new Date(); renderCalendar(); };
+
+// Initialize App
+migrateData();
+applyTheme(settings.theme || "light");
+$("statusFilter").value = settings.defaultStatus;
+render();
+</script>
+</body>
+</html>
